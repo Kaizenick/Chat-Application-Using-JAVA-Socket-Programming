@@ -61,7 +61,6 @@ classes for text field, Label, TextArea ,Button etc
 Chat application called ‘Anonymous Chat Application’ has been created with graphic user interface (GUI) capable of exchanging text chat between two or multiple computers over the network using java socket programming and JavaFX has been created. This application will let the user connect to the chat server or chat room with unique user name and will let user see who is online at the same chat room or server. This application has separated server and client application and as socket programming require server to be present for client to connect, server application called ‘ChatServer’ need to be run first before running ‘ChatClient’.
 
 ## Logic
-The logic of the application is explained below in bullet point.
 
 As server is required to relay the message between the clients, this application has a ‘ChatServer’ component which need to be executed first.
 After ‘ChatServer’ is running, client application called ‘ChatClient’ can be executed.
