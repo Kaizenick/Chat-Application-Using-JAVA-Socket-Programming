@@ -138,3 +138,30 @@ Stream socket (TCP): the class Socket.
 Datagram socket (UDP): the class 
 DatagramSocket. 
 This project shows TCP based client/server applications
+
+![image](https://user-images.githubusercontent.com/56361650/124974916-02dae100-e04b-11eb-8838-0fb20ebbedce.png)
+
+![image](https://user-images.githubusercontent.com/56361650/124974963-12f2c080-e04b-11eb-8a24-5634f764b5bf.png)
+
+Link for demonstration of the project:
+https://youtu.be/emC8PZTdKRQ
+
+## CONCLUSION AND INFERENCE
+* CONCEPT LEARNED:
+A socket is one endpoint of a two-way communication link between two 
+programs running on the network. Socket is bound to a port number so 
+that the TCP layer can identify the application that data is destined to be 
+sent.
+* CHALLENGES FACED:
+While working on the project we need to have a good command java 
+language and API We faced lot of problems while creating the GUI other 
+than that we faced trouble while selecting the port number for the machine as 
+there are some port numbers which are granted for different protocols.
+* CONCLUSION:
+In java socket programming, we learnt how to write java socket server and 
+java socket client program and implemented using data communication 
+concepts of transferring the data (messages) among the server and group 
+clients. We also learnt how server client program read and write data on 
+socket. We also learnt how server client program read and write data on 
+socket and use of GUI to provide customer better experience while using the 
+application.
