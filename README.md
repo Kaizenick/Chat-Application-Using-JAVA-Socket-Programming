@@ -84,14 +84,14 @@ connection is established.
 it waits for new incoming connection requests on its specific port, and
 it reads and writes messages on established connection (on new port) with 
 the accepted client.
-The server communicates with the client by reading from and writing to 
+4. The server communicates with the client by reading from and writing to 
 the new port. If other connection requests arrive, the server accepts them 
 in the similar way creating a new port for each new connection. Thus, at 
 any instant, the server must be able to communicate simultaneously with 
 many clients and to wait on the same time for incoming requests on its 
 specific server port. The communication with each client is done via the 
 sockets created for each communication.
-The java.net package in the Java development environment provides the 
+5. The java.net package in the Java development environment provides the 
 class Socket that implements the client side and the class serverSocket
 class that implements the server side socket.9
 The client and the server must agree on a protocol. They must agree on 
@@ -100,7 +100,8 @@ socket. There are two communication protocols :
 stream communication protocol and,
 datagram communication protocol.
 The stream communication protocol is known as TCP (transfer control 
-protocol). TCP is a connection-oriented protocol. It works as described 
+protocol).
+6. TCP is a connection-oriented protocol. It works as described 
 in this document. In order to communicate over the TCP protocol, a 
 connection must first be established between two sockets. While one of
 the sockets listens for a connection request (server), the other asks for a 
@@ -110,7 +111,7 @@ connected" we mean the fact that the server accepted a connection. As it
 was explained above the server creates a new local socket for the new 
 connection. The process of the new local socket creation, however, is 
 transparent for the client.
-The datagram communication protocol, known as UDP (user datagram 
+7. The datagram communication protocol, known as UDP (user datagram 
 protocol), is a connectionless protocol. No connection is established 
 before sending the data. The data are sent in a packet called datagram. 
 The datagram is sent like a request for establishing a connection. 
@@ -120,7 +121,7 @@ the remote application and no connection is established. This protocol
 requires that each time a datagram is sent, the local socket and the 
 remote socket addresses must also be sent in the datagram. These 
 addresses are sent in each datagram.
-The java.net package in the Java development environment provides 
+8. The java.net package in the Java development environment provides 
 theclass DatagramSocket for programming datagram communications.
 UDP is an unreliable protocol. There is no guarantee that the datagrams 
 will be delivered in a good order to the destination socket. For, example, 
