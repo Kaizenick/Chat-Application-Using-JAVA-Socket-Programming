@@ -1,300 +1,232 @@
+import java.io.*;
+import java.net.*;
+import java.util.*;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
-import java.io.*;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 
-public class ChatClient extends Application {
+public class ChatServer extends Application {
 
-    // Label was created to label different UI components.
-    Label labelName = new Label("Name");
-    Label labelMessages = new Label("Compose ");
-    Label labelReceived = new Label("Messages");
-    Label labelTitle = new Label();
-    Label labelActiveUser = new Label("Active User");
-    Label errorLabel = new Label("");
+    Label lbLog = new Label("Log");
+    Label lbUserList = new Label("Active User");
 
+   
+    private ArrayList<String> logList = new ArrayList<>();
+    private ArrayList<String> userList = new ArrayList<>();
 
-    ArrayList<String> userList = new ArrayList<>();
-    ArrayList<String> chatMessages = new ArrayList<>();
-
+    ListView<String> logListView = new ListView<String>();
     ListView<String> userListView = new ListView<String>();
-    ListView<String> messageListView = new ListView<String>();
 
-
+  
+    
+    ObservableList<String> logItems =
+            FXCollections.observableArrayList (logList);
     ObservableList<String> userItems =
             FXCollections.observableArrayList (userList);
 
-    ObservableList<String> messageItem =
-            FXCollections.observableArrayList (chatMessages);
 
+    private Hashtable outputStreams = new Hashtable();
 
-    TextField tfName = new TextField();
-    TextArea taComposeMessage = new TextArea();
+    private ArrayList<Socket> socketList = new ArrayList<>();
 
-    Button btJoin = new Button("Join");
-    Button btSend = new Button("Send");
-    Button btDisconnect = new Button("Exit");
+    private ServerSocket serverSocket;
 
-    // Declaring dataInput and Output streams.
-    DataOutputStream dataOutputStream;
-    DataInputStream dataInputStream;
+    @Override
+    public void start(Stage primaryStage) {
 
-    boolean joined = false;
-
-    private Socket socket;
-
-    private String userName;
-
-    private boolean connection = true;
-
-
-    @Override   
-    public void start(Stage primaryStage)  {
-
-
-        BorderPane borderPane = new BorderPane();
-        borderPane.setPadding(new Insets(10));
-
-        Font titleFont = new Font("Times New Roman",20);
-        labelTitle.setText("Welcome to Anonymous Chat Application");
-        labelTitle.setFont(titleFont);
-        Color titleColor = new Color(0.1, 0, 0.5,1);
-        labelTitle.setTextFill(titleColor);
-
-        tfName.setPromptText("Enter User Name");
-        taComposeMessage.setPromptText("Enter your Message");
-
-        taComposeMessage.setPrefHeight(2*(tfName.getHeight()));
-        taComposeMessage.setPrefWidth(250);
-
-        GridPane centreGridPane = new GridPane();
-        centreGridPane.setPadding(new Insets(10));
-        centreGridPane.setHgap(20);
-        centreGridPane.setVgap(10);
-
-        centreGridPane.add(labelName,0,0);
-        centreGridPane.add(tfName,1,0);
-        centreGridPane.add(btJoin,2,0);
-        centreGridPane.add(labelReceived,0,2);
-        centreGridPane.add(errorLabel,1,1,2,1);
-        centreGridPane.add(messageListView,1,2,2,1);
-
-        messageListView.setItems(messageItem);
+        
         userListView.setItems(userItems);
+        logListView.setItems(logItems);
+        logListView.setMinWidth(430);
 
-        userListView.setEditable(false);
-        messageListView.setEditable(false);
+        GridPane gridPane = new GridPane();
+        gridPane.setPadding(new Insets(10));
 
-        userListView.setMaxWidth(180);
-        userListView.setMaxHeight(250);
-
-        VBox rightVBox = new VBox();
-        rightVBox.setPadding(new Insets(20,0,10,0));
-        rightVBox.setSpacing(10);
-        rightVBox.getChildren().addAll(labelActiveUser,userListView);
-        borderPane.setRight(rightVBox);
-
-        GridPane bottomGridPane = new GridPane();
-        bottomGridPane.add(labelMessages,0,0);
-        bottomGridPane.add(taComposeMessage,1,0);
-        bottomGridPane.add(btSend,4,0);
-        bottomGridPane.add(btDisconnect,7,0);
-        bottomGridPane.setHgap(20);
-        bottomGridPane.setPadding(new Insets(10,0,10,10));
-        btSend.setAlignment(Pos.BASELINE_RIGHT);
-
-        borderPane.setTop(labelTitle);
-        borderPane.setAlignment(labelTitle,Pos.CENTER);
-
-        borderPane.setCenter(centreGridPane);
-
-        borderPane.setBottom(bottomGridPane);
-
-        Scene scene = new Scene(borderPane,580,400);
+        gridPane.add(lbLog,0,0);
+        gridPane.add(logListView,0,1);
+        gridPane.add(lbUserList,0,2);
+        gridPane.add(userListView,0,3);
+      
+        Scene scene = new Scene(gridPane, 450, 400);
+        primaryStage.setTitle("Server");
         primaryStage.setScene(scene); 
-        primaryStage.setTitle("Anonymous Chat"); 
-        primaryStage.show();   
-
-
+        primaryStage.show(); 
+     
          
         primaryStage.setOnCloseRequest(t -> closeSocketExit());
-        
-        btSend.setDisable(true);
 
-        btJoin.setOnAction(event -> joinChat());
-        btSend.setOnAction(e -> process());
-        btDisconnect.setOnAction(event -> closeSocketExit());
-
-        try {
-            socket = new Socket("localhost", 8000);
-
-            dataInputStream =
-                    new DataInputStream(socket.getInputStream());
-
-            dataOutputStream =
-                    new DataOutputStream(socket.getOutputStream());
-
-            new Thread(() -> receiveMessages()).start();
-        }
-   
-        catch (IOException ex) {
-            errorLabel.setTextFill(Color.RED);
-            errorLabel.setText("Unable to establish connection.");
-            System.err.println("Connection refused.");
-        }
+        new Thread(() -> listen()).start();
     }
 
 
     private void closeSocketExit() {
         try {
-            //If socket doesn't exit, no need to close.
-            if(socket!=null){
-                socket.close();
+            for(Socket socket:socketList){
+                
+                if(socket!=null){
+                    socket.close();
+                }
             }
-            Platform.exit();    // Close UI.
-        } 
-        catch (IOException e) {
+            Platform.exit();  
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
 
-    public void receiveMessages(){
-        try{
-            while(connection){
-
-
-                if(!joined){
-                    addUserName();
-                }
-                
-     
-                else{
-             
-                    message = dataInputStream.readUTF();
-                    if(message.startsWith("[")){
-                        addMessageToUserListView(message);
-                    }
-                    else{
-                    
-                        Platform.runLater(() -> {
-                            messageItem.add(message);
-                        });
-                    }
-                }
-            }
-        } catch (IOException ex) {
-            System.out.println("Socket is closed.receive");
-            Platform.runLater(() -> {
-                errorLabel.setTextFill(Color.RED);
-                errorLabel.setText("Unable to establish connection.");
-            });
-            connection = false;
-        }
-    }
-
-    private void joinChat(){
-        userName = tfName.getText();
-        if(userName.contains(",")){
-            Platform.runLater(() -> {
-                // Update UI here.
-                errorLabel.setTextFill(Color.RED);
-                errorLabel.setText("Cannot contain ','.");
-            });
-        }
-        else{
-            try {
-                dataOutputStream.writeUTF(userName);
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-
-
-    private void addMessageToUserListView(String s) {
-        List<String> list =
-                Arrays.asList(
-                        s.substring(1, s.length() - 1).split(", ")
-        );
-        Platform.runLater(() -> {
-            // Update UI here.
-            userItems.clear();
-            for(int i = 0; i < list.size(); i++){
-                if(!(list.get(i).equals(userName))){
-                    userItems.add(list.get(i));
-                }
-            }
-        });
-    }
-
-
-
-    private void addUserName()  {
-        String response;
+    private void listen() {
         try {
-            response = dataInputStream.readUTF();
-            if (response.startsWith("Accepted")){
-                joined = true;
-                Platform.runLater(() -> {
-                    System.out.println("User Connected as "+ userName);
-                    btSend.setDisable(false);
-                    btJoin.setDisable(true);
-                    tfName.setEditable(false);
-                    errorLabel.setTextFill(Color.GREEN);
-                    errorLabel.setText("Joined as " + userName);
-                });
+          
+            serverSocket = new ServerSocket(8000);
+            Platform.runLater(() ->
+                    logItems.add("MultiThreadServer started at " + new Date()));
+
+            while (true) {
+                Socket socket = serverSocket.accept();
+
+               
+                socketList.add(socket);
+
+                Platform.runLater(() ->
+                        logItems.add("Connection from " + socket + " at " + new Date()));
+
+                DataOutputStream dataOutputStream =
+                        new DataOutputStream(socket.getOutputStream());
+
+                outputStreams.put(socket, dataOutputStream);
+
+                new ServerThread(this, socket);
             }
-            else if(response.equals(userName)){
-                Platform.runLater(() -> {
-                    // Update UI here.
-                    tfName.clear();
-                    errorLabel.setTextFill(Color.RED);
-                    errorLabel.setText("User with same name exist.");
-                });
-            }
-        } catch (IOException e) {
-            System.out.println("Socket is closed.add");
-            Platform.runLater(() -> {
-                errorLabel.setTextFill(Color.RED);
-                errorLabel.setText("Unable to establish connection.");
-                connection = false;
-            });
+        }
+        catch(IOException ex) {
+            ex.printStackTrace();
         }
     }
 
 
-    private void process() {
-        try {
-            String string = tfName.getText().trim() + ":\n " +
-                     taComposeMessage.getText().trim();
+    private void dispatchUserList() {
+        this.sendToAll(userList.toString());
+    }
 
-            
-            dataOutputStream.writeUTF(string);
+    Enumeration getOutputStreams(){
+        return outputStreams.elements();
+    }
 
+
+    void sendToAll(String message){
       
-            taComposeMessage.setText("");
+        for (Enumeration e = getOutputStreams(); e.hasMoreElements();){
+            DataOutputStream dout = (DataOutputStream)e.nextElement();
+            try {
+                
+                dout.writeUTF(message);
+            }
+            catch (IOException ex) {
+                ex.printStackTrace();
+            }
         }
-        catch (IOException ex) {
-            System.err.println(ex);
+    }
+
+    void sendOnlineStatus(Socket socket,String message){
+        for (Enumeration e = getOutputStreams(); e.hasMoreElements();){
+            DataOutputStream dataOutputStream = (DataOutputStream)e.nextElement();
+            try {
+             
+                if(!(outputStreams.get(socket) == dataOutputStream)){
+                    
+                    dataOutputStream.writeUTF(message);
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+
+    class ServerThread extends Thread {
+        private ChatServer server;
+        private Socket socket;
+        String userName;  
+        boolean userJoined; 
+
+        public ServerThread(ChatServer server, Socket socket) {
+            this.socket = socket;
+            this.server = server;
+            start();
+        }
+
+        public void run() {
+            try {
+                
+                DataInputStream dataInputStream =
+                        new DataInputStream(socket.getInputStream());
+                DataOutputStream dataOutputStream =
+                        new DataOutputStream(socket.getOutputStream());
+
+                while (true) {
+              
+                    if(!userJoined){
+                        userName = dataInputStream.readUTF();
+                        if(userList.contains(userName)){
+                            dataOutputStream.writeUTF(userName);
+                            System.out.println(userName + " already exist.");
+                        }
+                        else{
+                            userList.add(userName);
+                            dataOutputStream.writeUTF("Accepted");
+                            server.dispatchUserList();
+                            System.out.println(userName +" joined the chat room");
+                            userJoined = true;
+                            String userNotification = userName + " joined the chat room.";
+                            Platform.runLater(() ->
+                                    logItems.add(userName + " joined the chat room."));
+                            server.sendOnlineStatus(socket,userNotification);
+                            userItems.clear();
+                            userItems.addAll(userList);
+                        }
+                    }
+            
+                    else if(userJoined){
+                       
+                        String string = dataInputStream.readUTF();
+
+                        
+                        server.sendToAll(string);
+                        server.dispatchUserList();
+
+                        Platform.runLater(() ->logItems.add(string));
+                    }
+                }
+            }
+
+
+  
+            catch(IOException ex) {
+                System.out.println("Connection Closed for " + userName);
+                Platform.runLater(() ->
+                        logItems.add("Connection Closed for " + userName));
+
+                if(!userName.equals(null)){
+                    userList.remove(userName);
+                }
+                outputStreams.remove(socket);
+                server.dispatchUserList();
+                if (!userName.equals(null)){
+                    server.sendToAll(userName + " has left the chat room.");
+                }
+                Platform.runLater(() ->{
+                    userItems.clear();
+                    userItems.addAll(userList);
+                });
+            }
         }
     }
 }
-
-
